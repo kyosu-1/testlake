@@ -11,16 +11,16 @@ func stubEnv(m map[string]string) func(string) string {
 
 func TestFromEnv(t *testing.T) {
 	env := stubEnv(map[string]string{
-		"GITHUB_RUN_ID":      "9876543210",
-		"GITHUB_RUN_ATTEMPT": "2",
-		"GITHUB_WORKFLOW":    "CI",
-		"GITHUB_JOB":         "unit-tests",
-		"GITHUB_REF_NAME":    "main",
-		"GITHUB_SHA":         "abc123",
-		"GITHUB_EVENT_NAME":  "push",
-		"RUNNER_OS":          "Linux",
+		"GITHUB_RUN_ID":       "9876543210",
+		"GITHUB_RUN_ATTEMPT":  "2",
+		"GITHUB_WORKFLOW":     "CI",
+		"GITHUB_JOB":          "unit-tests",
+		"GITHUB_REF_NAME":     "main",
+		"GITHUB_SHA":          "abc123",
+		"GITHUB_EVENT_NAME":   "push",
+		"RUNNER_OS":           "Linux",
 		"TESTLAKE_JOB_STATUS": "success",
-		"TESTLAKE_NOW":       "2026-07-08T10:00:00Z",
+		"TESTLAKE_NOW":        "2026-07-08T10:00:00Z",
 	})
 	m, err := FromEnv(env)
 	if err != nil {
@@ -41,5 +41,15 @@ func TestFromEnv(t *testing.T) {
 func TestFromEnvMissingRunID(t *testing.T) {
 	if _, err := FromEnv(stubEnv(map[string]string{})); err == nil {
 		t.Fatal("want error when GITHUB_RUN_ID missing")
+	}
+}
+
+func TestFromEnvMalformedTestlakeNow(t *testing.T) {
+	env := stubEnv(map[string]string{
+		"GITHUB_RUN_ID": "1",
+		"TESTLAKE_NOW":  "not-a-timestamp",
+	})
+	if _, err := FromEnv(env); err == nil {
+		t.Fatal("want error for malformed TESTLAKE_NOW")
 	}
 }

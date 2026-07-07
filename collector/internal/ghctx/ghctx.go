@@ -32,9 +32,11 @@ func FromEnv(getenv func(string) string) (RunMeta, error) {
 	}
 	now := time.Now().UTC()
 	if v := getenv("TESTLAKE_NOW"); v != "" {
-		if t, err := time.Parse(time.RFC3339, v); err == nil {
-			now = t.UTC()
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			return RunMeta{}, fmt.Errorf("TESTLAKE_NOW: %w", err)
 		}
+		now = t.UTC()
 	}
 	conclusion := getenv("TESTLAKE_JOB_STATUS")
 	if conclusion == "" {
