@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestParsePytest(t *testing.T) {
@@ -48,6 +49,19 @@ func TestTruncateFailureMessage(t *testing.T) {
 	long := strings.Repeat("x", 10000)
 	if got := truncate(long, 4096); len(got) != 4096 {
 		t.Errorf("len = %d", len(got))
+	}
+}
+
+func TestTruncateUTF8Safe(t *testing.T) {
+	// "あ" is a 3-byte rune in UTF-8; repeating it ensures the naive byte
+	// cut at n=4096 lands mid-rune (4096 is not a multiple of 3).
+	long := strings.Repeat("あ", 2000) // 6000 bytes
+	got := truncate(long, 4096)
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncate produced invalid UTF-8: %q", got)
+	}
+	if len(got) > 4096 {
+		t.Fatalf("len = %d, want <= 4096", len(got))
 	}
 }
 
