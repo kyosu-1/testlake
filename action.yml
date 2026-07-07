@@ -1,0 +1,41 @@
+name: testlake
+description: >-
+  Collect JUnit test results and build metadata into a Parquet data lake
+  on your gh-pages branch, queryable with the testlake DuckDB-Wasm viewer.
+branding:
+  icon: bar-chart-2
+  color: blue
+inputs:
+  reports:
+    description: Comma-separated globs of JUnit XML files
+    required: true
+  branch:
+    description: Branch to publish data to
+    default: gh-pages
+  viewer:
+    description: Also deploy the viewer SPA to <branch>/ci/
+    default: "false"
+  retention-days:
+    description: Delete data older than this many days
+    default: "400"
+  github-token:
+    description: Token used to push and to read job metadata
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - id: publish
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/publish.sh"
+      env:
+        INPUT_REPORTS: ${{ inputs.reports }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_VIEWER: ${{ inputs.viewer }}
+        INPUT_RETENTION_DAYS: ${{ inputs.retention-days }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        TESTLAKE_JOB_STATUS: ${{ job.status }}
+    - if: steps.publish.outputs.publish_failed == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: testlake-unpublished-${{ github.run_id }}-${{ github.job }}
+        path: ${{ steps.publish.outputs.staging_dir }}
