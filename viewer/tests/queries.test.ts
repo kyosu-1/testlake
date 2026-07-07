@@ -35,6 +35,14 @@ describe('flakySQL', () => {
     // TestCheckout は同一 sha で pass していないので flaky ではない
     expect(r.find((x) => x.name === 'TestCheckout')).toBeUndefined();
   });
+
+  it('runs with the default anchor (no argument) and stays ICU-free (now()::TIMESTAMP)', async () => {
+    // Locks in the default-anchor path used by every panel in the real app
+    // (main.ts never passes an anchor). The fixture dates are close to the
+    // real current date, so this should still surface TestLogin as flaky.
+    const r = await rows(flakySQL());
+    expect(r.find((x) => x.name === 'TestLogin')).toBeDefined();
+  });
 });
 
 describe('slowestTestsSQL', () => {

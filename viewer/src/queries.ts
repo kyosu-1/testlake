@@ -10,16 +10,26 @@ export function createViewsSQL(runFiles: string[], testFiles: string[]): string 
   `;
 }
 
-export function flakySQL(anchor = 'now()'): string {
+// `anchor` defaults to `now()::TIMESTAMP` (not bare `now()`) because duckdb-wasm
+// does not ship the ICU extension by default: `now()` is TIMESTAMPTZ, and
+// TIMESTAMPTZ arithmetic/comparison (`-INTERVAL`, `<`, `>`, date_diff, ...)
+// requires ICU. Casting to plain TIMESTAMP keeps everything on the core,
+// no-extension code path. Parquet timestamp columns (`started_at`, derived
+// `last_seen`) load as TIMESTAMPTZ too (isAdjustedToUTC), so they are cast
+// to ::TIMESTAMP wherever they're combined with `anchor` in arithmetic or
+// comparisons. All data is recorded in UTC (see design doc), so this cast
+// is a no-op on the underlying instant — it does not change query results.
+
+export function flakySQL(anchor = 'now()::TIMESTAMP'): string {
   return `
     WITH recent AS (
       SELECT * FROM tests
-      WHERE started_at > ${anchor} - INTERVAL 30 DAY
+      WHERE started_at::TIMESTAMP > ${anchor} - INTERVAL 30 DAY
         AND outcome IN ('passed','failed','error')
     ),
     per_sha AS (
       SELECT class, name, sha,
-             max(started_at) AS last_seen,
+             max(started_at)::TIMESTAMP AS last_seen,
              count(*) FILTER (outcome = 'passed') AS passes,
              count(*) FILTER (outcome IN ('failed','error')) AS fails
       FROM recent GROUP BY ALL
@@ -34,19 +44,19 @@ export function flakySQL(anchor = 'now()'): string {
     ORDER BY score DESC`;
 }
 
-export function slowestTestsSQL(anchor = 'now()'): string {
+export function slowestTestsSQL(anchor = 'now()::TIMESTAMP'): string {
   return `
     WITH passed AS (
       SELECT * FROM tests WHERE outcome = 'passed'
-        AND started_at > ${anchor} - INTERVAL 37 DAY
+        AND started_at::TIMESTAMP > ${anchor} - INTERVAL 37 DAY
     ),
     recent AS (
       SELECT class, name, median(duration_ms) AS p50_recent_ms
-      FROM passed WHERE started_at > ${anchor} - INTERVAL 7 DAY GROUP BY ALL
+      FROM passed WHERE started_at::TIMESTAMP > ${anchor} - INTERVAL 7 DAY GROUP BY ALL
     ),
     prior AS (
       SELECT class, name, median(duration_ms) AS p50_prior_ms
-      FROM passed WHERE started_at <= ${anchor} - INTERVAL 7 DAY GROUP BY ALL
+      FROM passed WHERE started_at::TIMESTAMP <= ${anchor} - INTERVAL 7 DAY GROUP BY ALL
     )
     SELECT r.class, r.name, r.p50_recent_ms, p.p50_prior_ms,
            r.p50_recent_ms / nullif(p.p50_prior_ms, 0) AS ratio
@@ -55,24 +65,24 @@ export function slowestTestsSQL(anchor = 'now()'): string {
     LIMIT 50`;
 }
 
-export function failuresSQL(anchor = 'now()'): string {
+export function failuresSQL(anchor = 'now()::TIMESTAMP'): string {
   return `
     SELECT workflow, branch,
            count(*) AS runs,
            count(*) FILTER (conclusion = 'failure') AS failed_runs,
            count(*) FILTER (conclusion = 'failure') / count(*)::DOUBLE AS failure_rate
     FROM runs
-    WHERE started_at > ${anchor} - INTERVAL 30 DAY
+    WHERE started_at::TIMESTAMP > ${anchor} - INTERVAL 30 DAY
     GROUP BY ALL
     ORDER BY failure_rate DESC, runs DESC`;
 }
 
-export function buildTrendSQL(anchor = 'now()'): string {
+export function buildTrendSQL(anchor = 'now()::TIMESTAMP'): string {
   return `
-    SELECT date_trunc('day', started_at)::DATE AS day, workflow, job,
+    SELECT date_trunc('day', started_at::TIMESTAMP)::DATE AS day, workflow, job,
            median(duration_ms) AS p50_duration_ms
     FROM runs
-    WHERE started_at > ${anchor} - INTERVAL 90 DAY
+    WHERE started_at::TIMESTAMP > ${anchor} - INTERVAL 90 DAY
     GROUP BY ALL
     ORDER BY day`;
 }

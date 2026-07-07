@@ -47,6 +47,7 @@ export async function attachData(db: duckdb.AsyncDuckDB, srcBase: string): Promi
 
 /** ?src= 指定がなければ、ビューアが <pages>/ci/ に居る前提で ../ci-data/ を読む */
 export function dataSource(): string {
-  return new URLSearchParams(location.search).get('src')
-    ?? new URL('../ci-data/', location.href).toString();
+  const raw = new URLSearchParams(location.search).get('src');
+  if (raw !== null) return new URL(raw, location.href).toString();
+  return new URL('../ci-data/', location.href).toString();
 }
