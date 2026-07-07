@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-07T19:37:37.949628Z",
+  "tables": {
+    "runs": {
+      "files": [
+        {
+          "path": "runs/date=2026-06-25/compacted.parquet",
+          "rows": 2,
+          "bytes": 2742
+        },
+        {
+          "path": "runs/date=2026-07-06/3-test-1.parquet",
+          "rows": 1,
+          "bytes": 2561
+        },
+        {
+          "path": "runs/date=2026-07-07/4-test-1.parquet",
+          "rows": 1,
+          "bytes": 2561
+        }
+      ]
+    },
+    "tests": {
+      "files": [
+        {
+          "path": "tests/date=2026-06-25/compacted.parquet",
+          "rows": 4,
+          "bytes": 3454
+        },
+        {
+          "path": "tests/date=2026-07-06/3-test-1.parquet",
+          "rows": 2,
+          "bytes": 3265
+        },
+        {
+          "path": "tests/date=2026-07-07/4-test-1.parquet",
+          "rows": 3,
+          "bytes": 3402
+        }
+      ]
+    }
+  }
+}
