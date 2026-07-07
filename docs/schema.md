@@ -26,7 +26,7 @@ Note: During compaction, a day's individual files may be replaced with a single 
 | runner_os | UTF8 | Actions context: runner OS |
 | started_at | TIMESTAMP(ms, UTC) | job start time (GitHub API); collection time as fallback |
 | duration_ms | INT64 | job duration in milliseconds; 0 = unknown |
-| conclusion | UTF8 | job.status: `success`, `failure`, `cancelled`, `unknown` |
+| conclusion | UTF8 | passthrough of GitHub's `job.status`; typical values: `success`, `failure`, `cancelled`; `unknown` when unset; treat as an open set, not an enforced enum |
 
 ## tests table
 
@@ -44,7 +44,7 @@ Note: During compaction, a day's individual files may be replaced with a single 
 | name | UTF8 | from JUnit XML: test case name |
 | file | UTF8 | from JUnit XML: file path |
 | outcome | UTF8 | test result: `passed`, `failed`, `error`, `skipped` |
-| duration_ms | INT64 | test duration in milliseconds |
+| duration_ms | INT64 | test duration in milliseconds; 0 can mean sub-millisecond or missing timing data |
 | failure_message | UTF8 | failure description; truncated to 4096 bytes |
 | failure_type | UTF8 | failure type or category |
 
@@ -90,8 +90,18 @@ The manifest describes all data files and enables efficient listing without dire
 
 ## Example query
 
+DuckDB cannot glob (`*`) over plain HTTP(S) URLs, so aggregating across all
+files requires the data to be local first. Clone the `gh-pages` branch (or
+download the `ci-data/` directory) and glob against the local copy:
+
 ```bash
-duckdb -c "SELECT outcome, count(*) FROM read_parquet('https://<user>.github.io/<repo>/ci-data/tests/*/*.parquet') GROUP BY 1"
+git clone -b gh-pages https://github.com/<user>/<repo> pages
+duckdb -c "SELECT outcome, count(*) FROM read_parquet('pages/ci-data/tests/*/*.parquet') GROUP BY 1"
 ```
 
-This query works across all test files, aggregating results by outcome.
+Direct-URL reads (no globbing) do work for individual files listed in
+`manifest.json`, e.g.:
+
+```bash
+duckdb -c "SELECT * FROM read_parquet('https://<user>.github.io/<repo>/ci-data/tests/date=2024-01-01/123-workflow-1.parquet') LIMIT 10"
+```

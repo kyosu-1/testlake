@@ -42,7 +42,7 @@ Your browser
 - **Flaky test ranking** — tests that both passed and failed on the same commit, scored by recent frequency
 - **Test duration trends** — spot the test that got 2× slower last month
 - **Failure analytics** — failure rates by branch and workflow
-- **Build time regression** — workflow/job duration trends with anomaly highlighting
+- **Build time regression** — workflow/job duration trends (p50)
 - **SQL console** — ad-hoc DuckDB SQL over `runs` and `tests`, right in the browser
 
 ## Usage
@@ -62,6 +62,12 @@ steps:
 Then enable GitHub Pages for the `gh-pages` branch. Your dashboard lives at
 `https://<user>.github.io/<repo>/ci/` and the raw Parquet at `.../ci-data/`.
 See [docs/schema.md](docs/schema.md) for the storage contract.
+
+## Known limitations (v0.1)
+
+- **Job duration for matrix/renamed jobs.** GitHub's API job-name lookup can miss matrix or renamed jobs; when it does, duration is recorded as `0` and excluded from trend medians (see [docs/schema.md](docs/schema.md)).
+- **No per-file skip on load failure.** If a Parquet file listed in `manifest.json` fails to load (e.g. a stale Pages cache right after a publish), the viewer fails to load entirely until the next publish. Per-file skip is planned for v0.2.
+- **No private-repo support.** Data published to `gh-pages` is public; private repositories are not yet supported.
 
 ## Roadmap
 
