@@ -83,5 +83,30 @@ func runCollect(args []string, getenv func(string) string, stdout io.Writer) err
 }
 
 func runFinalize(args []string, stdout io.Writer) error {
-	return fmt.Errorf("finalize: not implemented yet")
+	fs := flag.NewFlagSet("finalize", flag.ContinueOnError)
+	data := fs.String("data", "", "ci-data directory")
+	retention := fs.Int("retention-days", 400, "delete data older than this")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *data == "" {
+		return fmt.Errorf("--data is required")
+	}
+	now := time.Now().UTC()
+	if err := store.ApplyRetention(*data, now.AddDate(0, 0, -*retention)); err != nil {
+		return err
+	}
+	if err := store.Compact(*data, now.AddDate(0, 0, -7)); err != nil {
+		return err
+	}
+	m, err := store.BuildManifest(*data)
+	if err != nil {
+		return err
+	}
+	if err := store.WriteManifest(*data, m); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "testlake: finalized %s (%d run files, %d test files)\n",
+		*data, len(m.Tables["runs"].Files), len(m.Tables["tests"].Files))
+	return nil
 }

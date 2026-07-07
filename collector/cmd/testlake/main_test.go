@@ -63,3 +63,22 @@ func TestRunCollectNoReportsIsWarningNotError(t *testing.T) {
 		t.Errorf("want warning, got %q", out.String())
 	}
 }
+
+func TestRunFinalize(t *testing.T) {
+	dir := t.TempDir()
+	env := map[string]string{
+		"GITHUB_RUN_ID": "7", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_JOB": "test",
+		"TESTLAKE_NOW": "2026-07-08T10:00:00Z",
+	}
+	var out bytes.Buffer
+	if err := runCollect([]string{"--reports", "nope/**/*.xml", "--data", dir},
+		func(k string) string { return env[k] }, &out); err != nil {
+		t.Fatal(err)
+	}
+	if err := runFinalize([]string{"--data", dir, "--retention-days", "400"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "manifest.json")); err != nil {
+		t.Fatal("manifest.json not written")
+	}
+}
