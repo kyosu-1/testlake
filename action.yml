@@ -36,6 +36,7 @@ runs:
         TESTLAKE_JOB_STATUS: ${{ job.status }}
     - if: steps.publish.outputs.publish_failed == 'true'
       uses: actions/upload-artifact@v4
+      continue-on-error: true
       with:
         name: testlake-unpublished-${{ github.run_id }}-${{ github.job }}
         path: ${{ steps.publish.outputs.staging_dir }}

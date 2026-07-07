@@ -46,4 +46,20 @@ cat "$TMP/scenario3.log"
 test "$rc" -eq 0 || { echo "FAIL: publish.sh exited $rc (expected 0) for broken input"; exit 1; }
 grep -q '::warning::testlake:' "$TMP/scenario3.log" || { echo "FAIL: no ::warning:: emitted for broken input"; exit 1; }
 
+# 4) go build failure must also exit 0 かつ ::warning:: を出すこと
+#    - GITHUB_ACTION_PATH を empty dir に指す (collector/ subdir がない)
+#    - ( cd "$GITHUB_ACTION_PATH/collector" && go build ... ) が失敗する
+export GITHUB_RUN_ID=4
+export INPUT_REPORTS="$ROOT/collector/internal/junit/testdata/pytest.xml"
+export TESTLAKE_REMOTE_URL="$TMP/origin.git"
+empty_dir="$TMP/empty"
+mkdir -p "$empty_dir"
+set +e
+GITHUB_ACTION_PATH="$empty_dir" bash scripts/publish.sh >"$TMP/scenario4.log" 2>&1
+rc=$?
+set -e
+cat "$TMP/scenario4.log"
+test "$rc" -eq 0 || { echo "FAIL: publish.sh exited $rc (expected 0) for go build failure"; exit 1; }
+grep -q '::warning::testlake:' "$TMP/scenario4.log" || { echo "FAIL: no ::warning:: emitted for go build failure"; exit 1; }
+
 echo "publish_test: OK"
