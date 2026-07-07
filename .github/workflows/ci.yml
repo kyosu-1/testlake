@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: write # testlake action が gh-pages に push するため
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: collector/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Go tests (JUnit output)
+        working-directory: collector
+        run: |
+          mkdir -p ../reports
+          go run gotest.tools/gotestsum@latest --junitfile ../reports/go.xml ./...
+
+      - name: publish.sh integration test
+        run: bash scripts/publish_test.sh
+
+      - name: Viewer tests (JUnit output)
+        working-directory: viewer
+        run: |
+          npm ci
+          npx vitest run --reporter=default --reporter=junit --outputFile=../reports/viewer.xml
+          npm run build
+
+      - name: testlake (dogfood)
+        if: github.ref == 'refs/heads/main' && always()
+        uses: ./
+        with:
+          reports: "reports/**/*.xml"
+          viewer: "true"

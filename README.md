@@ -2,7 +2,7 @@
 
 **CI observability with zero servers.** Turn your GitHub Actions test results into a queryable data lake — flaky test detection, test duration trends, and build analytics, served as a static page powered by DuckDB-Wasm.
 
-> ⚠️ **Status: design phase.** Nothing is implemented yet. See the [design doc](docs/specs/2026-07-08-design.md) (Japanese).
+> **v0.1 is under active development.** Core pieces (collector, publish action, viewer) are implemented and self-hosted (see [Usage](#usage)); expect rough edges. See the [design doc](docs/specs/2026-07-08-design.md) (Japanese).
 
 ## Why
 
@@ -31,7 +31,7 @@ Your browser
 - **One-step setup:**
 
 ```yaml
-- uses: kyosu-1/testlake@v1
+- uses: kyosu-1/testlake@main
   if: always()
   with:
     reports: "test-results/**/*.xml"
@@ -44,6 +44,24 @@ Your browser
 - **Failure analytics** — failure rates by branch and workflow
 - **Build time regression** — workflow/job duration trends with anomaly highlighting
 - **SQL console** — ad-hoc DuckDB SQL over `runs` and `tests`, right in the browser
+
+## Usage
+
+```yaml
+permissions:
+  contents: write
+steps:
+  # ... run your tests, producing JUnit XML ...
+  - uses: kyosu-1/testlake@main
+    if: always()
+    with:
+      reports: "test-results/**/*.xml"
+      viewer: "true"   # deploy the dashboard to <gh-pages>/ci/
+```
+
+Then enable GitHub Pages for the `gh-pages` branch. Your dashboard lives at
+`https://<user>.github.io/<repo>/ci/` and the raw Parquet at `.../ci-data/`.
+See [docs/schema.md](docs/schema.md) for the storage contract.
 
 ## Roadmap
 
