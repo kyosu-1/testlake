@@ -16,7 +16,7 @@ func Compact(dataDir string, olderThan time.Time) error {
 	return compactTable[TestRow](filepath.Join(dataDir, "tests"), olderThan)
 }
 
-func compactTable[T any](tableDir string, olderThan time.Time) error {
+func compactTable[T comparable](tableDir string, olderThan time.Time) error {
 	days, err := os.ReadDir(tableDir)
 	if os.IsNotExist(err) {
 		return nil
@@ -30,6 +30,16 @@ func compactTable[T any](tableDir string, olderThan time.Time) error {
 			continue
 		}
 		dir := filepath.Join(tableDir, day.Name())
+
+		tmp := filepath.Join(dir, ".compacting.parquet")
+		// A stale tmp file left behind by a crashed/interrupted previous run
+		// must be removed before we start: it is never a valid input (see
+		// filter below), and it must not be left dangling if this run
+		// doesn't otherwise touch the directory.
+		if err := os.Remove(tmp); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+
 		entries, err := os.ReadDir(dir)
 		if err != nil || len(entries) <= 1 {
 			continue
@@ -37,10 +47,13 @@ func compactTable[T any](tableDir string, olderThan time.Time) error {
 		var all []T
 		var paths []string
 		for _, e := range entries {
-			if !strings.HasSuffix(e.Name(), ".parquet") {
+			name := e.Name()
+			// Dot-prefixed files (in particular a stale .compacting.parquet)
+			// are never valid compaction inputs.
+			if strings.HasPrefix(name, ".") || !strings.HasSuffix(name, ".parquet") {
 				continue
 			}
-			p := filepath.Join(dir, e.Name())
+			p := filepath.Join(dir, name)
 			rows, err := parquet.ReadFile[T](p)
 			if err != nil {
 				continue // 読めないファイルは残す(寛容)
@@ -51,17 +64,42 @@ func compactTable[T any](tableDir string, olderThan time.Time) error {
 		if len(paths) <= 1 {
 			continue
 		}
-		tmp := filepath.Join(dir, ".compacting.parquet")
-		if err := parquet.WriteFile(tmp, all); err != nil {
+
+		// Dedup identical rows while merging: if a previous compaction
+		// crashed after the rename but before deleting sources,
+		// compacted.parquet and a stale source can both be read as inputs
+		// here, and would otherwise be duplicated forever. Preserve
+		// first-seen order.
+		seen := make(map[T]struct{}, len(all))
+		deduped := make([]T, 0, len(all))
+		for _, row := range all {
+			if _, ok := seen[row]; ok {
+				continue
+			}
+			seen[row] = struct{}{}
+			deduped = append(deduped, row)
+		}
+
+		if err := parquet.WriteFile(tmp, deduped); err != nil {
+			return err
+		}
+		compactedPath := filepath.Join(dir, "compacted.parquet")
+		// Commit point: once this succeeds, the merged data is durable
+		// under its final name. Only after this may we delete sources.
+		if err := os.Rename(tmp, compactedPath); err != nil {
 			return err
 		}
 		for _, p := range paths {
+			// compacted.parquet can itself be one of the read inputs when
+			// re-compacting a day that gained new files since the last
+			// compaction; it is also the rename target above, so it must
+			// never appear in the delete list.
+			if p == compactedPath {
+				continue
+			}
 			if err := os.Remove(p); err != nil {
 				return err
 			}
-		}
-		if err := os.Rename(tmp, filepath.Join(dir, "compacted.parquet")); err != nil {
-			return err
 		}
 	}
 	return nil
