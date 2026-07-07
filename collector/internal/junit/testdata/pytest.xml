@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="pytest" tests="3" failures="1" skipped="1" time="1.5">
+  <testcase classname="tests.test_auth" name="test_login" file="tests/test_auth.py" time="0.501"/>
+  <testcase classname="tests.test_auth" name="test_logout" file="tests/test_auth.py" time="0.201">
+    <failure message="AssertionError: expected 200 got 500">Traceback...</failure>
+  </testcase>
+  <testcase classname="tests.test_auth" name="test_admin" file="tests/test_auth.py" time="0.0">
+    <skipped/>
+  </testcase>
+</testsuite>
