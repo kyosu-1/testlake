@@ -19,6 +19,8 @@ export function createViewsSQL(runFiles: string[], testFiles: string[]): string 
 // to ::TIMESTAMP wherever they're combined with `anchor` in arithmetic or
 // comparisons. All data is recorded in UTC (see design doc), so this cast
 // is a no-op on the underlying instant — it does not change query results.
+// NOTE: This requirement is verified in real browsers but NOT covered by CI
+// (node's duckdb-wasm links ICU statically), so do not remove these casts casually.
 
 export function flakySQL(anchor = 'now()::TIMESTAMP'): string {
   return `

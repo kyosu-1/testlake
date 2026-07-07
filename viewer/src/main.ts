@@ -26,10 +26,9 @@ async function q(sql: string): Promise<Record<string, unknown>[]> {
 }
 
 /**
- * duckdb-wasm の Arrow row.toJSON() は DATE/TIMESTAMP 列を Date インスタンス、
- * 数値(epoch ms)、または文字列で返すことがある(実測は buildTrendSQL の `day`
- * (DATE 型) を対象にブラウザ上で確認: Date インスタンスとして返ってくる)。
- * 3パターンすべてを epoch 秒に正規化する。
+ * duckdb-wasm の Arrow row.toJSON() は DATE/TIMESTAMP 列を数値(epoch ms)で返す(例: 1782345600000)。
+ * Date インスタンスや文字列で返ってくるケースは防御的フォールバック。
+ * すべてのパターンを epoch 秒に正規化する。
  */
 function toEpochSec(v: unknown): number {
   if (v instanceof Date) return v.getTime() / 1000;
