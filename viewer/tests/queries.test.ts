@@ -38,10 +38,13 @@ describe('flakySQL', () => {
 
   it('runs with the default anchor (no argument) and stays ICU-free (now()::TIMESTAMP)', async () => {
     // Locks in the default-anchor path used by every panel in the real app
-    // (main.ts never passes an anchor). The fixture dates are close to the
-    // real current date, so this should still surface TestLogin as flaky.
+    // (main.ts never passes an anchor). This only guards that the ICU-free
+    // default anchor (now()::TIMESTAMP) executes without error — it does not
+    // assert on row content, since the fixture dates are fixed (2026-06-25)
+    // while the anchor tracks the real clock, so any row-content assertion
+    // here would start failing once the 30-day window rolls past the fixtures.
     const r = await rows(flakySQL());
-    expect(r.find((x) => x.name === 'TestLogin')).toBeDefined();
+    expect(Array.isArray(r)).toBe(true);
   });
 });
 

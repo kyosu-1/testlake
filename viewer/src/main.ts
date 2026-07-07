@@ -37,6 +37,14 @@ function toEpochSec(v: unknown): number {
   return new Date(String(v)).getTime() / 1000;
 }
 
+function showError(body: HTMLElement, e: unknown): void {
+  body.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'error';
+  p.textContent = String(e);
+  body.appendChild(p);
+}
+
 async function show(tab: string, body: HTMLElement): Promise<void> {
   body.innerHTML = '<p>running…</p>';
   try {
@@ -79,7 +87,7 @@ async function show(tab: string, body: HTMLElement): Promise<void> {
       }
     }
   } catch (e) {
-    body.innerHTML = `<p class="error">${String(e)}</p>`;
+    showError(body, e);
   }
 }
 
@@ -105,7 +113,7 @@ async function boot(): Promise<void> {
     }
     await show('flaky', body);
   } catch (e) {
-    body.innerHTML = `<p class="error">${String(e)}</p>`;
+    showError(body, e);
   }
 }
 boot();

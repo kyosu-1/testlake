@@ -82,7 +82,7 @@ export function failuresSQL(anchor = 'now()::TIMESTAMP'): string {
 export function buildTrendSQL(anchor = 'now()::TIMESTAMP'): string {
   return `
     SELECT date_trunc('day', started_at::TIMESTAMP)::DATE AS day, workflow, job,
-           median(duration_ms) AS p50_duration_ms
+           median(nullif(duration_ms, 0)) AS p50_duration_ms
     FROM runs
     WHERE started_at::TIMESTAMP > ${anchor} - INTERVAL 90 DAY
     GROUP BY ALL

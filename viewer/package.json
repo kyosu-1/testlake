@@ -1,19 +1,14 @@
 {
   "name": "viewer",
   "version": "1.0.0",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
+  "private": true,
+  "description": "Static DuckDB-Wasm dashboard for testlake CI data",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.33.1-dev57.0",
     "uplot": "^1.6.32"
